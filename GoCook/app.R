@@ -1,11 +1,9 @@
 library(shiny)
 library(tidyverse)
 
-ingridients <- read.csv("https://raw.githubusercontent.com/nikolstarostin/GoCook/master/data/ingridients.csv",
-                        sep = ";")
-colnames(ingridients)[1] <- "id"
+
 recipe <- read.csv("https://raw.githubusercontent.com/nikolstarostin/GoCook/master/data/recipe.csv",
-                        sep = ";")
+                        sep = ";", encoding = "UTF-8")
 colnames(recipe)[1] <- "id"
 rating <- read.csv("https://raw.githubusercontent.com/nikolstarostin/GoCook/master/data/rating.csv",
                    sep = ";")
@@ -30,7 +28,7 @@ ui <- fluidPage(
             numericInput("ing1_n",
                          "Choose the amount of first ingridient?",
                          step = 0.01, 
-                         value = 0),
+                         value = 3),
             selectInput("ing2", "Select second ingridient:",
                         choices = c("Potato, kg", "Chicken, kg",
                                     "Sausage, pieces", "Oil, ml", 
@@ -38,7 +36,7 @@ ui <- fluidPage(
             numericInput("ing2_n",
                          "Choose the amount of second ingridient?",
                          step = 0.01, 
-                         value = 0),
+                         value = 2),
             selectInput("ing3", "Select third ingridient:",
                         choices = c("Potato, kg", "Chicken, kg",
                                     "Sausage, pieces", "Oil, ml", 
@@ -50,19 +48,23 @@ ui <- fluidPage(
         ),
 
         mainPanel(
-           plotOutput("distPlot")
+            textOutput("name"),
+            textOutput("text"),
+            tableOutput("table")
         )
     )
 )
 
 server <- function(input, output) {
+        ingridients <- reactive({read.csv("https://raw.githubusercontent.com/nikolstarostin/GoCook/master/data/ingridients.csv",
+                            sep = ";")})
         filter1 <- reactive({
             switch(input$ing1, 
-                   "Potato, kg" = filter(ingridients, potato_kg <= input$ing1_n), 
-                   "Chicken, kg" = filter(ingridients, chicken_kg <= input$ing1_n),
-                   "Sausage, pieces" = filter(ingridients, sausage_p <= input$ing1_n), 
-                   "Oil, ml" = filter(ingridients, oil_ml <= input$ing1_n), 
-                   "Panirovka, kg" = filter(ingridients, panirovka_kg <= input$ing1_n)) 
+                   "Potato, kg" = filter(ingridients(), potato_kg <= input$ing1_n), 
+                   "Chicken, kg" = filter(ingridients(), chicken_kg <= input$ing1_n),
+                   "Sausage, pieces" = filter(ingridients(), sausage_p <= input$ing1_n), 
+                   "Oil, ml" = filter(ingridients(), oil_ml <= input$ing1_n), 
+                   "Panirovka, kg" = filter(ingridients(), panirovka_kg <= input$ing1_n)) 
         })
         filter2 <- reactive({
             switch(input$ing2, 
@@ -80,7 +82,12 @@ server <- function(input, output) {
                    "Oil, ml" = filter(filter2(), oil_ml <= input$ing3_n), 
                    "Panirovka, kg" = filter(filter2(), panirovka_kg <= input$ing3_n)) 
         })
-        
+        recipes_filter <- reactive({
+            filter(recipe, id %in% filter3()[,1])
+        })
+        output$name <- renderText({as.character(recipes_filter()$name[1])})
+        output$text <- renderText({as.character(recipes_filter()$text[1])})
+        output$table <- renderTable(recipes_filter())
     
 }
 
